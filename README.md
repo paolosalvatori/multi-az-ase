@@ -52,5 +52,5 @@ Make sure to substitute the placeholders in the parameters files and in the **se
 VPN into the Jumpbox VM using Bastion or the public IP of the virtual machine, and use an internet browser to connect to the private endpoint exposed by the Application Gateway. If you refresh the page, you should see that requests are distributed across the 3 web Apps, each located in a separate zonal ILB App Service Environment.
 <br/>
 <br/>
-![HelloWorld](https://raw.githubusercontent.com/paolosalvatori/multi-az-ase/master/images/helloworld.png)
+![HelloWorld](https://raw.githubusercontent.com/paolosalvatori/multi-az-ase/master/images/helloworld.jpg)
 <br/>
