@@ -1,0 +1,21 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.1",
+  "parameters": {
+    "location": {
+      "value": "West Europe"
+    },
+    "keyVaultName": {
+      "value": "{PREFIX-PLACEHOLDER}KeyVault"
+    },
+    "keyVaultUsers": {
+      "value": [
+        "{OBJECT-ID-OF-YOUR-USER-ACCOUNT-ON-AZURE-ACTIVE-DIRECTORY}",
+        "{OBJECT-ID-OF-THE-SERVICE-PRINCIPAL-USED-BY-AZURE-DEVOPS-TO-DEPLOY-THE-WEB-APPS}",
+        "6bc92b88-1d80-4681-ad6e-5eb5f161bdb6",
+        "f8daea97-62e7-4026-becf-13c2ea98e8b4",
+        "ed47c2a1-bd23-4341-b39c-f4fd69138dd3"
+      ]
+    }
+  }
+}

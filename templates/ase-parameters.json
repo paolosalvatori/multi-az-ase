@@ -1,0 +1,156 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.1",
+  "parameters": {
+    "location": {
+      "value": "West Europe"
+    },
+    "storageAccountName": {
+      "value": "{UNIQUE-NAME}"
+    },
+    "keyVaultName": {
+      "value": "{PREFIX-PLACEHOLDER}KeyVault"
+    },
+    "workspaceName": {
+      "value": "{PREFIX-PLACEHOLDER}LogAnalytics"
+    },
+    "privateDnsZoneName": {
+      "value": "appserviceenvironment.net"
+    },
+    "virtualNetwork": {
+      "value": {
+				"name": "{PREFIX-PLACEHOLDER}Vnet",
+				"addressPrefixes": ["10.0.0.0/16"],
+				"subnets": [
+					{
+						"name": "VmSubnet",
+            "addressPrefix": "10.0.0.0/24",
+            "nsg": "VmSubnetNSG"
+					},
+					{
+						"name": "AgentSubnet",
+            "addressPrefix": "10.0.1.0/24",
+            "nsg": "VmSubnetNSG"
+					},
+					{
+						"name": "AppGatewaySubnet",
+            "addressPrefix": "10.0.2.0/24",
+            "nsg": "ApplicationGatewayNSG"
+					},
+					{
+						"name": "AseSubnet1",
+            "addressPrefix": "10.0.3.0/24",
+            "nsg": "{PREFIX-PLACEHOLDER}Ase1NSG"
+					},
+					{
+						"name": "AseSubnet2",
+            "addressPrefix": "10.0.4.0/24",
+            "nsg": "{PREFIX-PLACEHOLDER}Ase2NSG"
+					},
+					{
+						"name": "AseSubnet3",
+            "addressPrefix": "10.0.5.0/24",
+            "nsg": "{PREFIX-PLACEHOLDER}Ase3NSG"
+          },
+          {
+						"name": "AzureBastionSubnet",
+            "addressPrefix": "10.0.6.0/24",
+            "nsg": "BastionNSG"
+					}
+				]
+			}
+		},
+    "ases": {
+      "value": [
+        {
+          "name": "{PREFIX-PLACEHOLDER}Ase1",
+          "zones": ["1"],
+          "subnetName": "AseSubnet1",
+          "addressPrefix": "10.0.3.0/24",
+          "internalLoadBalancingMode": 1,
+          "serverFarm": {
+            "name": "{PREFIX-PLACEHOLDER}ServicePlan1",
+            "sku": {
+              "name": "I1",
+              "tier": "Isolated",
+              "size": "I1",
+              "family": "I",
+              "capacity": 1
+            }
+          },
+          "site": {
+            "name": "{PREFIX-PLACEHOLDER}1",
+            "keyVaultSecretName": "{PREFIX-PLACEHOLDER}1PrivateContosoCom",
+            "deploy": true,
+            "tags": {
+              "name": "{PREFIX-PLACEHOLDER}",
+              "workload": "{PREFIX-PLACEHOLDER}",
+              "kind": "WebServer"
+            }
+          }
+        },
+        {
+          "name": "{PREFIX-PLACEHOLDER}Ase2",
+          "zones": ["2"],
+          "subnetName": "AseSubnet2",
+          "addressPrefix": "10.0.4.0/24",
+          "internalLoadBalancingMode": 1,
+          "serverFarm": {
+            "name": "{PREFIX-PLACEHOLDER}ServicePlan2",
+            "sku": {
+              "name": "I1",
+              "tier": "Isolated",
+              "size": "I1",
+              "family": "I",
+              "capacity": 1
+            }
+          },
+          "site": {
+            "name": "{PREFIX-PLACEHOLDER}2",
+            "keyVaultSecretName": "{PREFIX-PLACEHOLDER}2PrivateContosoCom",
+            "deploy": true,
+            "tags": {
+              "name": "{PREFIX-PLACEHOLDER}",
+              "workload": "{PREFIX-PLACEHOLDER}",
+              "kind": "WebServer"
+            }
+          }
+        },
+        {
+          "name": "{PREFIX-PLACEHOLDER}Ase3",
+          "zones": ["3"],
+          "subnetName": "AseSubnet3",
+          "addressPrefix": "10.0.5.0/24",
+          "internalLoadBalancingMode": 1,
+          "serverFarm": {
+            "name": "{PREFIX-PLACEHOLDER}ServicePlan3",
+            "sku": {
+              "name": "I1",
+              "tier": "Isolated",
+              "size": "I1",
+              "family": "I",
+              "capacity": 1
+            }
+          },
+          "site": {
+            "name": "{PREFIX-PLACEHOLDER}3",
+            "keyVaultSecretName": "{PREFIX-PLACEHOLDER}3PrivateContosoCom",
+            "deploy": true,
+            "tags": {
+              "name": "{PREFIX-PLACEHOLDER}",
+              "workload": "{PREFIX-PLACEHOLDER}",
+              "kind": "WebServer"
+            }
+          }
+        }
+      ]
+    },
+    "bastionHost": {
+      "value": {
+        "name": "{PREFIX-PLACEHOLDER}Bastion",
+        "subnetName": "AzureBastionSubnet",
+        "deploy": true
+      }
+    }
+  }
+}

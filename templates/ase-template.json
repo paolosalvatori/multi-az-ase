@@ -1,0 +1,1816 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"tenantId": {
+			"type": "string",
+			"defaultValue": "[subscription().tenantId]",
+			"metadata": {
+				"description": "Specifies the tenant used by Key Vault."
+			}
+		},
+		"location": {
+			"type": "string",
+			"defaultValue": "[resourceGroup().location]",
+			"metadata": {
+				"description": "Location for the resources."
+			}
+		},
+		"storageAccountName": {
+			"type": "string",
+			"defaultValue": "baboaspnetsampleaspp",
+			"metadata": {
+				"description": "Name of the storage account"
+			}
+		},
+		"keyVaultName": {
+			"type": "string",
+			"defaultValue": "{PREFIX-PLACEHOLDER}AppKeyVault",
+			"metadata": {
+				"description": "Specifies the name of the Key Vault used by Azure DevOps."
+			}
+		},
+		"workspaceName": {
+			"type": "string",
+			"defaultValue": "{PREFIX-PLACEHOLDER}App",
+			"metadata": {
+				"description": "Name of the Log Analytics workspace"
+			}
+		},
+		"privateDnsZoneName": {
+			"type": "string",
+			"defaultValue": "appserviceenvironment.net",
+			"metadata": {
+				"description": "Private DNS Zone name."
+			}
+		},
+		"virtualNetwork": {
+			"type": "object",
+			"defaultValue": {
+				"name": "{PREFIX-PLACEHOLDER}Vnet",
+				"addressPrefixes": ["10.0.0.0/16"],
+				"subnets": [{
+						"name": "VmSubnet",
+						"addressPrefix": "10.0.0.0/24"
+					},
+					{
+						"name": "AgentSubnet",
+						"addressPrefix": "10.0.1.0/24"
+					},
+					{
+						"name": "AppGatewaySubnet",
+						"addressPrefix": "10.0.2.0/24"
+					},
+					{
+						"name": "AseSubnet1",
+						"addressPrefix": "10.0.3.0/24"
+					},
+					{
+						"name": "AseSubnet2",
+						"addressPrefix": "10.0.4.0/24"
+					},
+					{
+						"name": "AseSubnet3",
+						"addressPrefix": "10.0.5.0/24"
+					},
+					{
+						"name": "AzureBastionSubnet",
+						"addressPrefix": "10.0.7.0/24"
+					}
+				]
+			},
+			"metadata": {
+				"description": "Virtual Network configuration."
+			}
+		},
+		"ases": {
+			"type": "array",
+			"defaultValue": {
+				"value": [{
+						"name": "{PREFIX-PLACEHOLDER}Ase1",
+						"zones": ["1"],
+						"subnetName": "AseSubnet1",
+						"addressPrefix": "10.0.3.0/24",
+						"internalLoadBalancingMode": 1,
+						"serverFarm": {
+							"name": "{PREFIX-PLACEHOLDER}ServicePlan1",
+							"sku": {
+								"name": "I1",
+								"tier": "Isolated",
+								"size": "I1",
+								"family": "I",
+								"capacity": 1
+							}
+						},
+						"site": {
+							"name": "{PREFIX-PLACEHOLDER}1",
+							"keyVaultSecretName": "{PREFIX-PLACEHOLDER}1PrivateContosoCom",
+							"deploy": true,
+							"tags": {
+								"name": "{PREFIX-PLACEHOLDER}",
+								"workload": "{PREFIX-PLACEHOLDER}",
+								"kind": "WebServer"
+							}
+						}
+					},
+					{
+						"name": "{PREFIX-PLACEHOLDER}Ase2",
+						"zones": ["2"],
+						"subnetName": "AseSubnet2",
+						"addressPrefix": "10.0.4.0/24",
+						"internalLoadBalancingMode": 1,
+						"serverFarm": {
+							"name": "{PREFIX-PLACEHOLDER}ServicePlan2",
+							"sku": {
+								"name": "I1",
+								"tier": "Isolated",
+								"size": "I1",
+								"family": "I",
+								"capacity": 1
+							}
+						},
+						"site": {
+							"name": "{PREFIX-PLACEHOLDER}2",
+							"keyVaultSecretName": "{PREFIX-PLACEHOLDER}2PrivateContosoCom",
+							"deploy": true,
+							"tags": {
+								"name": "{PREFIX-PLACEHOLDER}",
+								"workload": "{PREFIX-PLACEHOLDER}",
+								"kind": "WebServer"
+							}
+						}
+					},
+					{
+						"name": "{PREFIX-PLACEHOLDER}Ase3",
+						"zones": ["3"],
+						"subnetName": "AseSubnet3",
+						"addressPrefix": "10.0.5.0/24",
+						"internalLoadBalancingMode": 1,
+						"serverFarm": {
+							"name": "{PREFIX-PLACEHOLDER}ServicePlan3",
+							"sku": {
+								"name": "I1",
+								"tier": "Isolated",
+								"size": "I1",
+								"family": "I",
+								"capacity": 1
+							}
+						},
+						"site": {
+							"name": "{PREFIX-PLACEHOLDER}3",
+							"keyVaultSecretName": "{PREFIX-PLACEHOLDER}3PrivateContosoCom",
+							"deploy": true,
+							"tags": {
+								"name": "{PREFIX-PLACEHOLDER}",
+								"workload": "{PREFIX-PLACEHOLDER}",
+								"kind": "WebServer"
+							}
+						}
+					}
+				]
+			},
+			"metadata": {
+				"description": "This array contains the configuration for App Service Environments, App Service Plans, Web Apps and Subnets."
+			}
+		},
+		"bastionHost": {
+			"type": "object",
+			"defaultValue": {
+				"name": "{PREFIX-PLACEHOLDER}Bastion",
+				"subnetName": "AzureBastionSubnet",
+				"region": "West Europe"
+			},
+			"metadata": {
+				"description": "Name and subnet of the Bastion Host"
+			}
+		}
+	},
+	"variables": {
+		"storageAccountId": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
+		"vnetId": "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetwork').name)]",
+		"workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces/', parameters('workspaceName'))]",
+		"bastionIpId": "[resourceId('Microsoft.Network/publicIpAddresses', concat(parameters('bastionHost').name, 'Ip'))]",
+		"bastionSubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetwork').name, parameters('bastionHost').subnetName)]",
+		"privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', parameters('privateDnsZoneName'))]"
+	},
+	"resources": [{
+			"type": "Microsoft.Network/networkSecurityGroups",
+			"name": "DefaultNSG",
+			"apiVersion": "2019-09-01",
+			"location": "[resourceGroup().location]",
+			"properties": {
+				"securityRules": [{
+						"name": "AllowAllInbound",
+						"properties": {
+							"description": "Allow all inbound connections",
+							"priority": 100,
+							"protocol": "Tcp",
+							"access": "Allow",
+							"direction": "Inbound",
+							"sourceAddressPrefix": "*",
+							"sourcePortRange": "*",
+							"destinationAddressPrefix": "*",
+							"destinationPortRange": "*"
+						}
+					},
+					{
+						"name": "AllowAllOutbound",
+						"properties": {
+							"description": "Allow all outbound connections",
+							"priority": 100,
+							"protocol": "Tcp",
+							"access": "Allow",
+							"direction": "Outbound",
+							"sourceAddressPrefix": "*",
+							"sourcePortRange": "*",
+							"destinationAddressPrefix": "*",
+							"destinationPortRange": "*"
+						}
+					}
+				]
+			}
+		},
+		{
+			"type": "Microsoft.Network/networkSecurityGroups",
+			"name": "VmSubnetNSG",
+			"apiVersion": "2019-09-01",
+			"location": "[resourceGroup().location]",
+			"properties": {
+				"securityRules": [{
+					"name": "AllopRDPInbound",
+					"properties": {
+						"description": "Allow RDP Connections",
+						"priority": 100,
+						"protocol": "Tcp",
+						"access": "Allow",
+						"direction": "Inbound",
+						"sourceAddressPrefix": "*",
+						"sourcePortRange": "*",
+						"destinationAddressPrefix": "*",
+						"destinationPortRange": "3389"
+					}
+				}]
+			}
+		},
+		{
+			"type": "Microsoft.Network/networkSecurityGroups",
+			"name": "ApplicationGatewayNSG",
+			"apiVersion": "2019-09-01",
+			"location": "[resourceGroup().location]",
+			"properties": {
+				"securityRules": [{
+						"name": "AllowHttpsInbound",
+						"properties": {
+							"description": "Allow inbound traffic on TCP ports 65200-65535",
+							"protocol": "Tcp",
+							"sourcePortRange": "*",
+							"destinationPortRange": "443",
+							"sourceAddressPrefix": "*",
+							"destinationAddressPrefix": "*",
+							"access": "Allow",
+							"priority": 100,
+							"direction": "Inbound"
+						}
+					},
+					{
+						"name": "AllowAppGatewayProbesInbound",
+						"properties": {
+							"description": "Allow ports for App Gateway probes",
+							"protocol": "Tcp",
+							"sourcePortRange": "*",
+							"destinationPortRange": "65200-65535",
+							"sourceAddressPrefix": "Internet",
+							"destinationAddressPrefix": "*",
+							"access": "Allow",
+							"priority": 103,
+							"direction": "Inbound"
+						}
+					}
+				]
+			}
+		},
+		{
+			"apiVersion": "2019-09-01",
+			"type": "Microsoft.Network/networkSecurityGroups",
+			"name": "BastionNSG",
+			"location": "[resourceGroup().location]",
+			"properties": {
+				"securityRules": [{
+						"name": "BastionAllowHttpsInbound",
+						"properties": {
+							"description": "Allow inbound HTTPS traffic",
+							"protocol": "Tcp",
+							"sourcePortRange": "*",
+							"sourceAddressPrefix": "*",
+							"destinationPortRange": "443",
+							"destinationAddressPrefix": "*",
+							"access": "Allow",
+							"priority": 100,
+							"direction": "Inbound"
+						}
+					},
+					{
+						"name": "BastionAllowGatewayManagerInbound",
+						"properties": {
+							"description": "Allow inbound HTTPS traffic from Application Gateway",
+							"protocol": "Tcp",
+							"sourcePortRange": "*",
+							"sourceAddressPrefix": "GatewayManager",
+							"destinationPortRange": "443",
+							"destinationAddressPrefix": "*",
+							"access": "Allow",
+							"priority": 120,
+							"direction": "Inbound"
+						}
+					},
+					{
+						"name": "BastionDenyAllInbound",
+						"properties": {
+							"description": "Deny all inbound traffic",
+							"protocol": "*",
+							"sourcePortRange": "*",
+							"destinationPortRange": "*",
+							"sourceAddressPrefix": "*",
+							"destinationAddressPrefix": "*",
+							"access": "Deny",
+							"priority": 900,
+							"direction": "Inbound"
+						}
+					},
+					{
+						"name": "BastionVnetAllowRdpAndSshOutbound",
+						"properties": {
+							"description": "Allow inbound RDP and SSH traffic",
+							"protocol": "Tcp",
+							"sourcePortRange": "*",
+							"sourceAddressPrefix": "*",
+							"destinationPortRanges": [
+								"22",
+								"3389"
+							],
+							"destinationAddressPrefix": "VirtualNetwork",
+							"access": "Allow",
+							"priority": 100,
+							"direction": "Outbound"
+						}
+					},
+					{
+						"name": "BastionAzureAllowHttpsOutbound",
+						"properties": {
+							"description": "Allow inbound RDP and SSH traffic",
+							"protocol": "Tcp",
+							"sourcePortRange": "*",
+							"sourceAddressPrefix": "*",
+							"destinationPortRange": "443",
+							"destinationAddressPrefix": "AzureCloud",
+							"access": "Allow",
+							"priority": 120,
+							"direction": "Outbound"
+						}
+					},
+					{
+						"name": "BastionDenyAllOutbound",
+						"properties": {
+							"description": "Deny all inbound traffic",
+							"protocol": "*",
+							"sourcePortRange": "*",
+							"sourceAddressPrefix": "*",
+							"destinationPortRange": "*",
+							"destinationAddressPrefix": "*",
+							"access": "Deny",
+							"priority": 900,
+							"direction": "Outbound"
+						}
+					}
+				]
+			}
+		},
+		{
+			"type": "Microsoft.Network/networkSecurityGroups",
+			"name": "[concat(parameters('ases')[copyIndex()].name, 'NSG')]",
+			"apiVersion": "2019-09-01",
+			"location": "[resourceGroup().location]",
+			"copy": {
+				"name": "nsg",
+				"count": "[length(parameters('ases'))]"
+			},
+			"properties": {
+				"securityRules": [{
+						"name": "AllowManagementInbound",
+						"properties": {
+							"description": "Used to manage ASE from public VIP",
+							"protocol": "*",
+							"sourcePortRange": "*",
+							"destinationPortRange": "454-455",
+							"sourceAddressPrefix": "*",
+							"destinationAddressPrefix": "*",
+							"access": "Allow",
+							"priority": 100,
+							"direction": "Inbound"
+						}
+					},
+					{
+						"name": "AllowASEInternalInbound",
+						"properties": {
+							"description": "ASE internal inbound traffic",
+							"protocol": "*",
+							"sourcePortRange": "*",
+							"destinationPortRange": "*",
+							"sourceAddressPrefix": "[parameters('ases')[copyIndex()].addressPrefix]",
+							"destinationAddressPrefix": "*",
+							"access": "Allow",
+							"priority": 110,
+							"direction": "Inbound"
+						}
+					},
+					{
+						"name": "AllowHttpInbound",
+						"properties": {
+							"description": "Allow HTTP",
+							"protocol": "*",
+							"sourcePortRange": "*",
+							"destinationPortRange": "80",
+							"sourceAddressPrefix": "*",
+							"destinationAddressPrefix": "*",
+							"access": "Allow",
+							"priority": 120,
+							"direction": "Inbound"
+						}
+					},
+					{
+						"name": "AllowHttpsInbound",
+						"properties": {
+							"description": "Allow HTTPS",
+							"protocol": "*",
+							"sourcePortRange": "*",
+							"destinationPortRange": "443",
+							"sourceAddressPrefix": "*",
+							"destinationAddressPrefix": "*",
+							"access": "Allow",
+							"priority": 130,
+							"direction": "Inbound"
+						}
+					},
+					{
+						"name": "AllowFTPInbound",
+						"properties": {
+							"description": "Allow FTP over port 21",
+							"protocol": "*",
+							"sourcePortRange": "*",
+							"destinationPortRange": "21",
+							"sourceAddressPrefix": "*",
+							"destinationAddressPrefix": "*",
+							"access": "Allow",
+							"priority": 140,
+							"direction": "Inbound"
+						}
+					},
+					{
+						"name": "AllowFTPSInbound",
+						"properties": {
+							"description": "Allow control plan for FTPS",
+							"protocol": "*",
+							"sourcePortRange": "*",
+							"destinationPortRange": "990",
+							"sourceAddressPrefix": "*",
+							"destinationAddressPrefix": "*",
+							"access": "Allow",
+							"priority": 150,
+							"direction": "Inbound"
+						}
+					},
+					{
+						"name": "AllowFTPDataInbound",
+						"properties": {
+							"description": "Allow Data channels for FTP",
+							"protocol": "*",
+							"sourcePortRange": "*",
+							"destinationPortRange": "10001-10020",
+							"sourceAddressPrefix": "*",
+							"destinationAddressPrefix": "*",
+							"access": "Allow",
+							"priority": 160,
+							"direction": "Inbound"
+						}
+					},
+					{
+						"name": "AllowRemoteDebuggingInbound",
+						"properties": {
+							"description": "Visual Studio Remote Debugging",
+							"protocol": "*",
+							"sourcePortRange": "*",
+							"destinationPortRange": "4016-4022",
+							"sourceAddressPrefix": "*",
+							"destinationAddressPrefix": "*",
+							"access": "Allow",
+							"priority": 170,
+							"direction": "Inbound"
+						}
+					},
+					{
+						"name": "AllowHttpsOutbound",
+						"properties": {
+							"description": "Azure Storage Blob",
+							"protocol": "*",
+							"sourcePortRange": "*",
+							"destinationPortRange": "443",
+							"sourceAddressPrefix": "*",
+							"destinationAddressPrefix": "*",
+							"access": "Allow",
+							"priority": 100,
+							"direction": "Outbound"
+						}
+					},
+					{
+						"name": "AllowSMBOutbound",
+						"properties": {
+							"description": "Azure Storage Queue",
+							"protocol": "*",
+							"sourcePortRange": "*",
+							"destinationPortRange": "445",
+							"sourceAddressPrefix": "*",
+							"destinationAddressPrefix": "*",
+							"access": "Allow",
+							"priority": 110,
+							"direction": "Outbound"
+						}
+					},
+					{
+						"name": "AllowSQLOutbound",
+						"properties": {
+							"description": "Allow outbound traffic to SQL Database",
+							"protocol": "*",
+							"sourcePortRange": "*",
+							"destinationPortRanges": [
+								"1433 ",
+								"11000-11999",
+								"14000-14999"
+							],
+							"sourceAddressPrefix": "*",
+							"destinationAddressPrefix": "*",
+							"access": "Allow",
+							"priority": 120,
+							"direction": "Outbound"
+						}
+					},
+					{
+						"name": "AllowDNSOutbound",
+						"properties": {
+							"description": "Allow DNS outbound traffic",
+							"protocol": "*",
+							"sourcePortRange": "*",
+							"destinationPortRange": "53",
+							"sourceAddressPrefix": "*",
+							"destinationAddressPrefix": "*",
+							"access": "Allow",
+							"priority": 150,
+							"direction": "Outbound"
+						}
+					},
+					{
+						"name": "AllowAseInternalOutbound",
+						"properties": {
+							"description": "Allow outbound ASE traffic",
+							"protocol": "*",
+							"sourcePortRange": "*",
+							"destinationPortRange": "*",
+							"sourceAddressPrefix": "*",
+							"destinationAddressPrefix": "[parameters('ases')[copyIndex()].addressPrefix]",
+							"access": "Allow",
+							"priority": 160,
+							"direction": "Outbound"
+						}
+					},
+					{
+						"name": "AllowHttpOutbound",
+						"properties": {
+							"description": "Allow HTTP outbound traffic",
+							"protocol": "*",
+							"sourcePortRange": "*",
+							"destinationPortRange": "80",
+							"sourceAddressPrefix": "*",
+							"destinationAddressPrefix": "*",
+							"access": "Allow",
+							"priority": 170,
+							"direction": "Outbound"
+						}
+					},
+					{
+						"name": "AllowAseToVnetOutbound",
+						"properties": {
+							"description": "Allow ASE to VNET outbound traffic",
+							"protocol": "*",
+							"sourcePortRange": "*",
+							"destinationPortRange": "*",
+							"sourceAddressPrefix": "*",
+							"destinationAddressPrefix": "[parameters('virtualNetwork').addressPrefixes[0]]",
+							"access": "Allow",
+							"priority": 180,
+							"direction": "Outbound"
+						}
+					}
+				]
+			}
+		},
+		{
+			"type": "Microsoft.KeyVault/vaults/secrets",
+			"name": "[concat(parameters('keyVaultName'), '/', 'logAnalyticsWorkspaceId')]",
+			"apiVersion": "2018-02-14",
+			"location": "[resourceGroup().location]",
+			"dependsOn": [
+				"[variables('workspaceId')]"
+			],
+			"properties": {
+				"value": "[reference(variables('workspaceId'), '2017-03-15-preview').customerId]"
+			}
+		},
+		{
+			"type": "Microsoft.KeyVault/vaults/secrets",
+			"name": "[concat(parameters('keyVaultName'), '/', 'logAnalyticsWorkspaceKey')]",
+			"apiVersion": "2018-02-14",
+			"location": "[resourceGroup().location]",
+			"dependsOn": [
+				"[variables('workspaceId')]"
+			],
+			"properties": {
+				"value": "[listKeys(variables('workspaceId'), '2017-03-15-preview').primarySharedKey]"
+			}
+		},
+		{
+			"type": "Microsoft.KeyVault/vaults/secrets",
+			"name": "[concat(parameters('keyVaultName'), '/', 'storageAccountName')]",
+			"apiVersion": "2018-02-14",
+			"location": "[resourceGroup().location]",
+			"dependsOn": [
+				"[variables('storageAccountId')]"
+			],
+			"properties": {
+				"value": "[parameters('storageAccountName')]"
+			}
+		},
+		{
+			"type": "Microsoft.KeyVault/vaults/secrets",
+			"name": "[concat(parameters('keyVaultName'), '/', 'storageAccountKey')]",
+			"apiVersion": "2018-02-14",
+			"location": "[resourceGroup().location]",
+			"dependsOn": [
+				"[variables('storageAccountId')]"
+			],
+			"properties": {
+				"value": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), providers('Microsoft.Storage', 'storageAccounts').apiVersions[0]).keys[0].value]"
+			}
+		},
+		{
+			"type": "Microsoft.Storage/storageAccounts",
+			"name": "[parameters('storageAccountName')]",
+			"apiVersion": "2016-01-01",
+			"location": "[parameters('location')]",
+			"sku": {
+				"name": "Standard_LRS"
+			},
+			"kind": "Storage",
+			"properties": {}
+		},
+		{
+			"apiVersion": "2017-08-01",
+			"type": "Microsoft.Network/virtualNetworks",
+			"name": "[parameters('virtualNetwork').name]",
+			"location": "[parameters('location')]",
+			"dependsOn": [
+				"[resourceId('Microsoft.Network/networkSecurityGroups', '{PREFIX-PLACEHOLDER}Ase1NSG')]",
+				"[resourceId('Microsoft.Network/networkSecurityGroups', '{PREFIX-PLACEHOLDER}Ase2NSG')]",
+				"[resourceId('Microsoft.Network/networkSecurityGroups', '{PREFIX-PLACEHOLDER}Ase3NSG')]",
+				"[resourceId('Microsoft.Network/networkSecurityGroups', 'VmSubnetNSG')]",
+				"[resourceId('Microsoft.Network/networkSecurityGroups', 'DefaultNSG')]",
+				"[resourceId('Microsoft.Network/networkSecurityGroups', 'ApplicationGatewayNSG')]",
+				"[resourceId('Microsoft.Network/networkSecurityGroups', 'BastionNSG')]"
+			],
+			"properties": {
+				"addressSpace": {
+					"addressPrefixes": "[parameters('virtualNetwork').addressPrefixes]"
+				},
+				"copy": [{
+					"name": "subnets",
+					"count": "[length(parameters('virtualNetwork').subnets)]",
+					"input": {
+						"name": "[parameters('virtualNetwork').subnets[copyIndex('subnets')].name]",
+						"properties": {
+							"addressPrefix": "[parameters('virtualNetwork').subnets[copyIndex('subnets')].addressPrefix]",
+							"networkSecurityGroup": {
+								"id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('virtualNetwork').subnets[copyIndex('subnets')].nsg)]"
+							}
+						}
+					}
+				}]
+			}
+		},
+		{
+			"condition": "[parameters('ases')[copyIndex()].site.deploy]",
+			"name": "[parameters('ases')[copyIndex()].site.name]",
+			"type": "Microsoft.Insights/components",
+			"location": "[parameters('location')]",
+			"apiVersion": "2015-05-01",
+			"kind": "web",
+			"copy": {
+				"name": "applicationInsights",
+				"count": "[length(parameters('ases'))]"
+			},
+			"tags": "[parameters('ases')[copyIndex()].site.tags]",
+			"properties": {
+				"Application_Type": "web",
+				"Request_Source": "rest"
+			}
+		},
+		{
+			"condition": "[parameters('ases')[copyIndex()].site.deploy]",
+			"type": "Microsoft.KeyVault/vaults/secrets",
+			"name": "[concat(parameters('keyVaultName'), '/', parameters('ases')[copyIndex()].site.name, 'InstrumentationKey')]",
+			"apiVersion": "2018-02-14",
+			"location": "[parameters('location')]",
+			"copy": {
+				"name": "applicationInsightInstrumentationKeys",
+				"count": "[length(parameters('ases'))]"
+			},
+			"dependsOn": [
+				"[resourceId('Microsoft.Insights/components', parameters('ases')[copyIndex()].site.name)]"
+			],
+			"properties": {
+				"value": "[reference(resourceId('Microsoft.Insights/components/', parameters('ases')[copyIndex()].site.name), '2015-05-01').InstrumentationKey]"
+			}
+		},
+		{
+			"apiVersion": "2015-11-01-preview",
+			"type": "Microsoft.OperationalInsights/workspaces",
+			"name": "[parameters('workspaceName')]",
+			"location": "[parameters('location')]",
+			"properties": {
+				"sku": {
+					"name": "PerGB2018"
+				}
+			},
+			"resources": [{
+					"apiVersion": "2015-11-01-preview",
+					"location": "[parameters('location')]",
+					"name": "[concat('WireData2', '(', parameters('workspaceName'),')')]",
+					"type": "Microsoft.OperationsManagement/solutions",
+					"dependsOn": [
+						"[concat('Microsoft.OperationalInsights/workspaces/', parameters('workspaceName'))]"
+					],
+					"properties": {
+						"workspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces/', parameters('workspaceName'))]"
+					},
+					"plan": {
+						"name": "[concat('WireData2', '(', parameters('workspaceName'),')')]",
+						"publisher": "Microsoft",
+						"product": "OMSGallery/WireData2",
+						"promotionCode": ""
+					}
+				},
+				{
+					"apiVersion": "2015-11-01-preview",
+					"location": "[parameters('location')]",
+					"name": "[concat('AgentHealthAssessment', '(', parameters('workspaceName'),')')]",
+					"type": "Microsoft.OperationsManagement/solutions",
+					"dependsOn": [
+						"[concat('Microsoft.OperationalInsights/workspaces/', parameters('workspaceName'))]"
+					],
+					"properties": {
+						"workspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces/', parameters('workspaceName'))]"
+					},
+					"plan": {
+						"name": "[concat('AgentHealthAssessment', '(', parameters('workspaceName'),')')]",
+						"publisher": "Microsoft",
+						"product": "OMSGallery/AgentHealthAssessment",
+						"promotionCode": ""
+					}
+				},
+				{
+					"apiVersion": "2015-11-01-preview",
+					"location": "[parameters('location')]",
+					"name": "[concat('ServiceMap', '(', parameters('workspaceName'),')')]",
+					"type": "Microsoft.OperationsManagement/solutions",
+					"dependsOn": [
+						"[concat('Microsoft.OperationalInsights/workspaces/', parameters('workspaceName'))]"
+					],
+					"properties": {
+						"workspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces/', parameters('workspaceName'))]"
+					},
+					"plan": {
+						"name": "[concat('ServiceMap', '(', parameters('workspaceName'),')')]",
+						"publisher": "Microsoft",
+						"product": "[concat('OMSGallery/', 'ServiceMap')]",
+						"promotionCode": ""
+					}
+				},
+				{
+					"apiVersion": "2015-11-01-preview",
+					"location": "[parameters('location')]",
+					"name": "[concat('InfrastructureInsights', '(', parameters('workspaceName'),')')]",
+					"type": "Microsoft.OperationsManagement/solutions",
+					"dependsOn": [
+						"[concat('Microsoft.OperationalInsights/workspaces/', parameters('workspaceName'))]"
+					],
+					"properties": {
+						"workspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces/', parameters('workspaceName'))]"
+					},
+					"plan": {
+						"name": "[concat('InfrastructureInsights', '(', parameters('workspaceName'),')')]",
+						"publisher": "Microsoft",
+						"product": "[concat('OMSGallery/', 'InfrastructureInsights')]",
+						"promotionCode": ""
+					}
+				},
+				{
+					"apiVersion": "2015-11-01-preview",
+					"type": "dataSources",
+					"name": "VMInsights-LogicalDisk-Avg-DiskSecTransfer",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"kind": "WindowsPerformanceCounter",
+					"properties": {
+						"objectName": "LogicalDisk",
+						"instanceName": "*",
+						"intervalSeconds": 10,
+						"counterName": "Avg. Disk sec/Transfer"
+					}
+				},
+				{
+					"apiVersion": "2015-11-01-preview",
+					"type": "dataSources",
+					"name": "VMInsights-LogicalDisk-Disk-ReadBytesSec",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"kind": "WindowsPerformanceCounter",
+					"properties": {
+						"objectName": "LogicalDisk",
+						"instanceName": "*",
+						"intervalSeconds": 10,
+						"counterName": "Disk Read Bytes/sec"
+					}
+				},
+				{
+					"apiVersion": "2015-11-01-preview",
+					"type": "dataSources",
+					"name": "VMInsights-LogicalDisk-Disk-TransfersSec",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"kind": "WindowsPerformanceCounter",
+					"properties": {
+						"objectName": "LogicalDisk",
+						"instanceName": "*",
+						"intervalSeconds": 10,
+						"counterName": "Disk Transfers/sec"
+					}
+				},
+				{
+					"apiVersion": "2015-11-01-preview",
+					"type": "dataSources",
+					"name": "VMInsights-LogicalDisk-Disk-WritesSec",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"kind": "WindowsPerformanceCounter",
+					"properties": {
+						"objectName": "LogicalDisk",
+						"instanceName": "*",
+						"intervalSeconds": 10,
+						"counterName": "Average_Disk Writes/sec"
+					}
+				},
+				{
+					"apiVersion": "2015-11-01-preview",
+					"type": "dataSources",
+					"name": "VMInsights-LogicalDisk-FreeMegabytes",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"kind": "WindowsPerformanceCounter",
+					"properties": {
+						"objectName": "LogicalDisk",
+						"instanceName": "*",
+						"intervalSeconds": 10,
+						"counterName": "Free Megabytes"
+					}
+				},
+				{
+					"apiVersion": "2015-11-01-preview",
+					"type": "dataSources",
+					"name": "VMInsights-Memory-AvailableMBytes",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"kind": "WindowsPerformanceCounter",
+					"properties": {
+						"objectName": "Memory",
+						"instanceName": "*",
+						"intervalSeconds": 10,
+						"counterName": "Available MBytes Memory"
+					}
+				},
+				{
+					"apiVersion": "2015-11-01-preview",
+					"type": "dataSources",
+					"name": "VMInsights-Memory-PercentageUsedMemory",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"kind": "WindowsPerformanceCounter",
+					"properties": {
+						"objectName": "Memory",
+						"instanceName": "*",
+						"intervalSeconds": 10,
+						"counterName": "Average_% Used Memory"
+					}
+				},
+				{
+					"apiVersion": "2015-11-01-preview",
+					"type": "dataSources",
+					"name": "VMInsights-NetworkAdapter-TotalBytesReceived",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"kind": "WindowsPerformanceCounter",
+					"properties": {
+						"objectName": "Network Adapter",
+						"instanceName": "*",
+						"intervalSeconds": 10,
+						"counterName": "Total Bytes Received"
+					}
+				},
+				{
+					"apiVersion": "2015-11-01-preview",
+					"type": "dataSources",
+					"name": "VMInsights-NetworkAdapter-TotalBytesTransmitted",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"kind": "WindowsPerformanceCounter",
+					"properties": {
+						"objectName": "Network Adapter",
+						"instanceName": "*",
+						"intervalSeconds": 10,
+						"counterName": "Total Bytes Transmitted"
+					}
+				},
+				{
+					"apiVersion": "2015-11-01-preview",
+					"type": "dataSources",
+					"name": "VMInsights-NetworkAdapter-TotalBytes",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"kind": "WindowsPerformanceCounter",
+					"properties": {
+						"objectName": "Network Adapter",
+						"instanceName": "*",
+						"intervalSeconds": 10,
+						"counterName": "Total Bytes"
+					}
+				},
+				{
+					"apiVersion": "2015-11-01-preview",
+					"type": "dataSources",
+					"name": "VMInsights-Processor-Pct-Processor-Time-Total",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"kind": "WindowsPerformanceCounter",
+					"properties": {
+						"objectName": "Processor",
+						"instanceName": "_Total",
+						"intervalSeconds": 10,
+						"counterName": "% Processor Time"
+					}
+				},
+				{
+					"apiVersion": "2015-11-01-preview",
+					"type": "dataSources",
+					"name": "VMInsights-LogicalDisk-CurrentDiskQueueLength",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"kind": "WindowsPerformanceCounter",
+					"properties": {
+						"objectName": "LogicalDisk",
+						"instanceName": "*",
+						"intervalSeconds": 10,
+						"counterName": "Average_Current Disk Queue Length"
+					}
+				},
+				{
+					"apiVersion": "2015-11-01-preview",
+					"type": "dataSources",
+					"name": "VMInsights-LogicalDisk-DiskReadsSec",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"kind": "WindowsPerformanceCounter",
+					"properties": {
+						"objectName": "LogicalDisk",
+						"instanceName": "*",
+						"intervalSeconds": 10,
+						"counterName": "Disk Reads/sec"
+					}
+				},
+				{
+					"apiVersion": "2015-11-01-preview",
+					"type": "dataSources",
+					"name": "VMInsights-ASPNETApplications-RequestsSec",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"kind": "WindowsPerformanceCounter",
+					"properties": {
+						"objectName": "ASP.NET Applications",
+						"instanceName": "*",
+						"intervalSeconds": 10,
+						"counterName": "Requests/Sec"
+					}
+				},
+				{
+					"apiVersion": "2015-11-01-preview",
+					"type": "dataSources",
+					"name": "VMInsights-ASPNETApplications-RequestExecutionTime",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"kind": "WindowsPerformanceCounter",
+					"properties": {
+						"objectName": "ASP.NET Applications",
+						"instanceName": "*",
+						"intervalSeconds": 10,
+						"counterName": "Request Execution Time"
+					}
+				},
+				{
+					"apiVersion": "2015-11-01-preview",
+					"type": "dataSources",
+					"name": "VMInsights-ASPNETApplications-RequestsExecuting",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"kind": "WindowsPerformanceCounter",
+					"properties": {
+						"objectName": "ASP.NET Applications",
+						"instanceName": "*",
+						"intervalSeconds": 10,
+						"counterName": "Requests Executing"
+					}
+				},
+				{
+					"apiVersion": "2015-11-01-preview",
+					"type": "dataSources",
+					"name": "VMInsights-ASPNETApplications-RequestsInApplicationQueue",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"kind": "WindowsPerformanceCounter",
+					"properties": {
+						"objectName": "ASP.NET Applications",
+						"instanceName": "*",
+						"intervalSeconds": 10,
+						"counterName": "Requests In Application Queue"
+					}
+				},
+				{
+					"apiVersion": "2015-11-01-preview",
+					"type": "dataSources",
+					"name": "VMInsights-ASPNETApplications-RequestsTimedOut",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"kind": "WindowsPerformanceCounter",
+					"properties": {
+						"objectName": "ASP.NET Applications",
+						"instanceName": "*",
+						"intervalSeconds": 10,
+						"counterName": "Requests Timed Out"
+					}
+				},
+				{
+					"apiVersion": "2015-11-01-preview",
+					"type": "dataSources",
+					"name": "VMInsights-ASPNETApplications-ErrorsTotalSec",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"kind": "WindowsPerformanceCounter",
+					"properties": {
+						"objectName": "ASP.NET Applications",
+						"instanceName": "*",
+						"intervalSeconds": 10,
+						"counterName": "Errors Total/Sec"
+					}
+				},
+				{
+					"apiVersion": "2015-03-20",
+					"name": "Search01",
+					"type": "savedSearches",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"properties": {
+						"Category": "IIS Logs",
+						"ETag": "*",
+						"DisplayName": "Average Execution Time by Client IP  (Timechart)",
+						"Query": "W3CIISLog | summarize ['Average Execution Time'] = ceiling(avg(TimeTaken)) by bin(TimeGenerated, 1m), cIP | render timechart",
+						"Version": 1
+					}
+				},
+				{
+					"apiVersion": "2015-03-20",
+					"name": "Search02",
+					"type": "savedSearches",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"properties": {
+						"Category": "IIS Logs",
+						"ETag": "*",
+						"DisplayName": "Request Count by Client IP (Timechart)",
+						"Query": "W3CIISLog | summarize ['Request Count'] = count() by bin(TimeGenerated, 1m), cIP | render timechart",
+						"Version": 1
+					}
+				},
+				{
+					"apiVersion": "2015-03-20",
+					"name": "Search03",
+					"type": "savedSearches",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"properties": {
+						"Category": "IIS Logs",
+						"ETag": "*",
+						"DisplayName": "Average Execution Time by Web Server (Timechart)",
+						"Query": "W3CIISLog | summarize ['Average Execution Time'] = ceiling(avg(TimeTaken)) by bin(TimeGenerated, 1m), Computer | render timechart",
+						"Version": 1
+					}
+				},
+				{
+					"apiVersion": "2015-03-20",
+					"name": "Search04",
+					"type": "savedSearches",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"properties": {
+						"Category": "IIS Logs",
+						"ETag": "*",
+						"DisplayName": "Request Count by Web Server (Timechart)",
+						"Query": "W3CIISLog | summarize ['Request Count'] = count() by bin(TimeGenerated, 1m), Computer | render timechart",
+						"Version": 1
+					}
+				},
+				{
+					"apiVersion": "2015-03-20",
+					"name": "Search05",
+					"type": "savedSearches",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"properties": {
+						"Category": "Performance Counters",
+						"ETag": "*",
+						"DisplayName": "Average Request/Sec by VM/Application (Timechart)",
+						"Query": "Perf | where CounterName == 'Requests/Sec' and ObjectName == 'ASP.NET Applications' | summarize ['Requests/Sec'] = avg(CounterValue)  by bin(TimeGenerated, 1m), InstanceName = strcat(Computer, '_', replace('__', '', replace('_LM_W3SVC_1_ROOT_', '', InstanceName))) | render timechart",
+						"Version": 1
+					}
+				},
+				{
+					"apiVersion": "2015-03-20",
+					"name": "Search06",
+					"type": "savedSearches",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"properties": {
+						"Category": "Performance Counters",
+						"ETag": "*",
+						"DisplayName": "Average Request Execution Time by VM and Application (Timechart)",
+						"Query": "Perf | where CounterName == 'Request Execution Time' and ObjectName == 'ASP.NET Applications' | summarize ['Request Execution Time'] = ceiling(avg(CounterValue))  by bin(TimeGenerated, 1s), InstanceName = strcat(Computer, '_', replace('__', '', replace('_LM_W3SVC_1_ROOT_', '', InstanceName))) | render timechart",
+						"Version": 1
+					}
+				},
+				{
+					"apiVersion": "2015-03-20",
+					"name": "Search07",
+					"type": "savedSearches",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"properties": {
+						"Category": "IIS Logs",
+						"ETag": "*",
+						"DisplayName": "Top 20 Requests by Average Execution Time (Table)",
+						"Query": "W3CIISLog | summarize ['Request Count'] = count(), ['Average Execution Time'] = ceiling(avg(TimeTaken)) by ['Request relative URI'] = csUriStem | where ['Request Count'] > 10 | order by ['Average Execution Time'] | take 20",
+						"Version": 1
+					}
+				},
+				{
+					"apiVersion": "2015-03-20",
+					"name": "Search08",
+					"type": "savedSearches",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"properties": {
+						"Category": "Performance Counters",
+						"ETag": "*",
+						"DisplayName": "Average Processor Time by VM (Timechart)",
+						"Query": "Perf | where CounterName == '% Processor Time' and ObjectName == 'Processor' and  InstanceName == '_Total' | summarize ['% Processor Time'] = avg(CounterValue) by bin(TimeGenerated, 1m), Computer | render timechart",
+						"Version": 1
+					}
+				},
+				{
+					"apiVersion": "2015-03-20",
+					"name": "Search09",
+					"type": "savedSearches",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"properties": {
+						"Category": "Performance Counters",
+						"ETag": "*",
+						"DisplayName": "Average, Minimum and Maximum Processor Time by VM (Table)",
+						"Query": "Perf | where CounterName == '% Processor Time' and ObjectName == 'Processor' and InstanceName == '_Total' | summarize ['Average Processor Time'] = ceiling(avg(CounterValue)), ['Minimum Processor Time'] = ceiling(min(CounterValue)), ['Maximum Processor Time'] = ceiling(max(CounterValue)) by Computer | order by ['Average Processor Time']",
+						"Version": 1
+					}
+				},
+				{
+					"apiVersion": "2015-03-20",
+					"name": "Search10",
+					"type": "savedSearches",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"properties": {
+						"Category": "Performance Counters",
+						"ETag": "*",
+						"DisplayName": "Average Available MBytes by VM (Timechart)",
+						"Query": "Perf | where CounterName == 'Available MBytes' and ObjectName == 'Memory' | summarize ['Available MBytes'] = avg(CounterValue) by bin(TimeGenerated, 1m), Computer | render timechart",
+						"Version": 1
+					}
+				},
+				{
+					"apiVersion": "2015-03-20",
+					"name": "Search11",
+					"type": "savedSearches",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"properties": {
+						"Category": "Performance Counters",
+						"ETag": "*",
+						"DisplayName": "Requests Timed Out by VM (Table)",
+						"Query": "Perf | where CounterName == 'Requests Timed Out' and   ObjectName == 'ASP.NET Applications' | summarize ['Requests Timed Out'] = ceiling(avg(CounterValue)) by Computer = extract('([0-9A-Za-z_]*)', 1, Computer)",
+						"Version": 1
+					}
+				},
+				{
+					"apiVersion": "2015-03-20",
+					"name": "Search12",
+					"type": "savedSearches",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"properties": {
+						"Category": "Performance Counters",
+						"ETag": "*",
+						"DisplayName": "Average Number of .NET Exceptions/Sec by VM (Timechart)",
+						"Query": "Perf | where CounterName == '# of Exceps Thrown / sec' and ObjectName == '.NET CLR Exceptions' | summarize ['# of Exceps Thrown / sec'] = avg(CounterValue) by bin(TimeGenerated, 10s), Computer | render timechart",
+						"Version": 1
+					}
+				},
+				{
+					"apiVersion": "2015-03-20",
+					"name": "Search13",
+					"type": "savedSearches",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"properties": {
+						"Category": "IIS Logs",
+						"ETag": "*",
+						"DisplayName": "Percentiles by Request Uri (Table)",
+						"Query": "W3CIISLog | where csUriStem !endswith '.js' and csUriStem !endswith '.css' and csUriStem !endswith '.png' and csUriStem !endswith '.woff2' and csUriStem !contains'swagger' | summarize percentiles(TimeTaken, 90, 95, 99) by ['Request relative URI'] = csUriStem | order by percentile_TimeTaken_90 desc",
+						"Version": 1
+					}
+				},
+				{
+					"apiVersion": "2015-03-20",
+					"name": "Search14",
+					"type": "savedSearches",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"properties": {
+						"Category": "Windows Event Logs",
+						"ETag": "*",
+						"DisplayName": "Error Count by VM (Table)",
+						"Query": "Event | where EventLevelName == 'Error' | summarize ['Error Count'] = count() by Computer | order by ['Error Count']",
+						"Version": 1
+					}
+				},
+				{
+					"apiVersion": "2015-03-20",
+					"name": "Search15",
+					"type": "savedSearches",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"properties": {
+						"Category": "Windows Event Logs",
+						"ETag": "*",
+						"DisplayName": "Errors and Warnings by VM (Table)",
+						"Query": "Event | where EventLevelName in ('Error', 'Warning') | project Computer, EventLog, RenderedDescription, TimeGenerated",
+						"Version": 1
+					}
+				},
+				{
+					"apiVersion": "2015-03-20",
+					"name": "Search16",
+					"type": "savedSearches",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"properties": {
+						"Category": "IIS Logs",
+						"ETag": "*",
+						"DisplayName": "Response codes (Table)",
+						"Query": "W3CIISLog | summarize AggregatedValue = count() by scStatus",
+						"Version": 1
+					}
+				},
+				{
+					"apiVersion": "2015-03-20",
+					"name": "Search17",
+					"type": "savedSearches",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"properties": {
+						"Category": "IIS Logs",
+						"ETag": "*",
+						"DisplayName": "HTTP Status Codes by API (Table)",
+						"Query": "W3CIISLog  | where csUriStem contains 'WebApi' | summarize ['Count'] = count() by ['HTTP Status Code'] = scStatus, ['API'] = csUriStem | order by Count",
+						"Version": 1
+					}
+				},
+				{
+					"apiVersion": "2015-03-20",
+					"name": "Search18",
+					"type": "savedSearches",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"properties": {
+						"Category": "IIS Logs",
+						"ETag": "*",
+						"DisplayName": "HTTP Status Codes by API (Table)",
+						"Query": "W3CIISLog  | where csUriStem contains 'WebApi' | summarize ['Count'] = count() by ['HTTP Status Code'] = scStatus, ['API'] = csUriStem | order by Count",
+						"Version": 1
+					}
+				},
+				{
+					"apiVersion": "2015-11-01-preview",
+					"type": "dataSources",
+					"name": "WindowsEventLog-Application",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"kind": "WindowsEvent",
+					"properties": {
+						"eventLogName": "Application",
+						"eventTypes": [{
+								"eventType": "Error"
+							},
+							{
+								"eventType": "Warning"
+							}
+						]
+					}
+				},
+				{
+					"apiVersion": "2015-11-01-preview",
+					"type": "dataSources",
+					"name": "WindowsEventLog-System",
+					"dependsOn": [
+						"[variables('workspaceId')]"
+					],
+					"kind": "WindowsEvent",
+					"properties": {
+						"eventLogName": "System",
+						"eventTypes": [{
+								"eventType": "Error"
+							},
+							{
+								"eventType": "Warning"
+							}
+						]
+					}
+				}
+			]
+		},
+		{
+			"apiVersion": "2019-08-01",
+			"type": "Microsoft.Web/hostingEnvironments",
+			"name": "[parameters('ases')[copyIndex()].name]",
+			"kind": "ASEV2",
+			"location": "[parameters('location')]",
+			"zones": "[parameters('ases')[copyIndex()].zones]",
+			"copy": {
+				"name": "hostingEnvironments",
+				"count": "[length(parameters('ases'))]"
+			},
+			"dependsOn": [
+				"[variables('vnetId')]"
+			],
+			"properties": {
+				"name": "[parameters('ases')[copyIndex()].name]",
+				"location": "[parameters('location')]",
+				"ipSslAddressCount": 0,
+				"internalLoadBalancingMode": "[parameters('ases')[copyIndex()].internalLoadBalancingMode]",
+				"virtualNetwork": {
+					"Id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetwork').name, parameters('ases')[copyIndex()].subnetName)]"
+				}
+			}
+		},
+		{
+			"type": "Microsoft.web/serverfarms",
+			"apiVersion": "2019-08-01",
+			"name": "[parameters('ases')[copyIndex()].serverFarm.name]",
+			"location": "[parameters('location')]",
+			"sku": "[parameters('ases')[copyIndex()].serverFarm.sku]",
+			"copy": {
+				"name": "serverFarms",
+				"count": "[length(parameters('ases'))]"
+			},
+			"tags": {
+				"name": "[parameters('ases')[copyIndex()].serverFarm.name]"
+			},
+			"kind": "app",
+			"dependsOn": [
+				"[resourceId('Microsoft.Web/hostingEnvironments', parameters('ases')[copyIndex()].name)]"
+			],
+			"properties": {
+				"name": "[parameters('ases')[copyIndex()].serverFarm.name]",
+				"perSiteScaling": true,
+				"workerSize": "0",
+				"workerSizeId": "0",
+				"numberOfWorkers": "1",
+				"reserved": false,
+				"hostingEnvironment": "[parameters('ases')[copyIndex()].name]"
+			}
+		},
+		{
+			"condition": "[parameters('ases')[copyIndex()].site.deploy]",
+			"name": "[parameters('ases')[copyIndex()].site.name]",
+			"type": "Microsoft.Web/sites",
+			"apiVersion": "2019-08-01",
+			"location": "[parameters('location')]",
+			"copy": {
+				"name": "sites",
+				"count": "[length(parameters('ases'))]"
+			},
+			"tags": "[parameters('ases')[copyIndex()].site.tags]",
+			"kind": "app",
+			"properties": {
+				"enabled": true,
+				"serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('ases')[copyIndex()].serverFarm.name)]",
+				"reserved": false,
+				"scmSiteAlsoStopped": false,
+				"hostingEnvironmentProfile": {
+					"id": "[resourceId('Microsoft.Web/hostingEnvironments', parameters('ases')[copyIndex()].name)]"
+				},
+				"clientAffinityEnabled": true,
+				"clientCertEnabled": false,
+				"hostNamesDisabled": false,
+				"containerSize": 0,
+				"dailyMemoryTimeQuota": 0,
+				"httpsOnly": false
+			},
+			"dependsOn": [
+				"[resourceId('Microsoft.Web/serverfarms', parameters('ases')[copyIndex()].serverFarm.name)]",
+				"[resourceId('Microsoft.Web/hostingEnvironments', parameters('ases')[copyIndex()].name)]"
+			]
+		},
+		{
+			"condition": "[parameters('ases')[copyIndex()].site.deploy]",
+			"name": "[concat(parameters('ases')[copyIndex()].site.name, '/', toLower(concat(parameters('ases')[copyIndex()].site.name, '.', parameters('ases')[copyIndex()].name, '.', parameters('privateDnsZoneName'))))]",
+			"type": "Microsoft.Web/sites/hostNameBindings",
+			"apiVersion": "2019-08-01",
+			"location": "[resourceGroup().location]",
+			"copy": {
+				"name": "hostNameBindings",
+				"count": "[length(parameters('ases'))]"
+			},
+			"properties": {},
+			"dependsOn": [
+				"[resourceId('Microsoft.Web/sites', parameters('ases')[copyIndex()].site.name)]"
+			]
+		},
+		{
+			"condition": "[parameters('ases')[copyIndex()].site.deploy]",
+			"name": "[concat(parameters('ases')[copyIndex()].serverFarm.name, 'AutoscaleSettings')]",
+			"type": "Microsoft.Insights/autoscaleSettings",
+			"apiVersion": "2015-04-01",
+			"location": "[resourceGroup().location]",
+			"copy": {
+				"name": "autoscaleSettings",
+				"count": "[length(parameters('ases'))]"
+			},
+			"tags": {},
+			"dependsOn": [
+				"[resourceId('Microsoft.web/serverFarms', parameters('ases')[copyIndex()].serverFarm.name)]"
+			],
+			"properties": {
+				"enabled": true,
+				"targetResourceUri": "[resourceId('Microsoft.web/serverFarms', parameters('ases')[copyIndex()].serverFarm.name)]",
+				"notifications": [],
+				"profiles": [{
+					"name": "Auto created scale condition",
+					"capacity": {
+						"minimum": "1",
+						"maximum": "10",
+						"default": "1"
+					},
+					"rules": [{
+							"metricTrigger": {
+								"metricName": "CpuPercentage",
+								"metricNamespace": "microsoft.web/serverfarms",
+								"metricResourceUri": "[resourceId('Microsoft.web/serverFarms', parameters('ases')[copyIndex()].serverFarm.name)]",
+								"timeGrain": "PT1M",
+								"statistic": "Average",
+								"timeWindow": "PT10M",
+								"timeAggregation": "Average",
+								"operator": "GreaterThan",
+								"threshold": 70,
+								"dimensions": [],
+								"dividePerInstance": false
+							},
+							"scaleAction": {
+								"direction": "Increase",
+								"type": "ChangeCount",
+								"value": "1",
+								"cooldown": "PT5M"
+							}
+						},
+						{
+							"metricTrigger": {
+								"metricName": "CpuPercentage",
+								"metricNamespace": "microsoft.web/serverfarms",
+								"metricResourceUri": "[resourceId('Microsoft.web/serverFarms', parameters('ases')[copyIndex()].serverFarm.name)]",
+								"timeGrain": "PT1M",
+								"statistic": "Average",
+								"timeWindow": "PT10M",
+								"timeAggregation": "Average",
+								"operator": "LessThan",
+								"threshold": 70,
+								"dimensions": [],
+								"dividePerInstance": false
+							},
+							"scaleAction": {
+								"direction": "Decrease",
+								"type": "ChangeCount",
+								"value": "1",
+								"cooldown": "PT5M"
+							}
+						}
+					]
+				}]
+			}
+		},
+		{
+			"type": "Microsoft.Network/privateDnsZones",
+			"apiVersion": "2018-09-01",
+			"name": "[parameters('privateDnsZoneName')]",
+			"location": "global",
+			"dependsOn": [
+				"[variables('vnetId')]"
+			],
+			"properties": {
+				"maxNumberOfRecordSets": 25000,
+				"maxNumberOfVirtualNetworkLinks": 1000,
+				"maxNumberOfVirtualNetworkLinksWithRegistration": 100
+			}
+		},
+		{
+			"type": "Microsoft.Network/privateDnsZones/SOA",
+			"apiVersion": "2018-09-01",
+			"name": "[concat(parameters('privateDnsZoneName'), '/@')]",
+			"dependsOn": [
+				"[resourceId('Microsoft.Network/privateDnsZones', parameters('privateDnsZoneName'))]"
+			],
+			"properties": {
+				"ttl": 3600,
+				"soaRecord": {
+					"email": "azureprivatedns-host.microsoft.com",
+					"expireTime": 2419200,
+					"host": "azureprivatedns.net",
+					"refreshTime": 3600,
+					"retryTime": 300,
+					"serialNumber": 1,
+					"minimumTtl": 300
+				}
+			}
+		},
+		{
+			"type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+			"apiVersion": "2018-09-01",
+			"name": "[concat(parameters('privateDnsZoneName'), '/LinkTo', parameters('virtualNetwork').name)]",
+			"location": "global",
+			"dependsOn": [
+				"[resourceId('Microsoft.Network/privateDnsZones', parameters('privateDnsZoneName'))]"
+			],
+			"properties": {
+				"registrationEnabled": true,
+				"virtualNetwork": {
+					"id": "[variables('vnetId')]"
+				}
+			}
+		},
+		{
+			"condition": "[parameters('bastionHost').deploy]",
+			"apiVersion": "2019-02-01",
+			"type": "Microsoft.Network/publicIPAddresses",
+			"name": "[concat(parameters('bastionHost').name, 'Ip')]",
+			"location": "[resourceGroup().location]",
+			"sku": {
+				"name": "Standard"
+			},
+			"properties": {
+				"publicIPAllocationMethod": "Static"
+			}
+		},
+		{
+			"condition": "[parameters('bastionHost').deploy]",
+			"type": "Microsoft.Network/bastionHosts",
+			"apiVersion": "2019-09-01",
+			"name": "[parameters('bastionHost').name]",
+			"location": "[resourceGroup().location]",
+			"dependsOn": [
+				"[variables('bastionIpId')]",
+				"[variables('vnetId')]",
+				"[variables('privateDnsZoneId')]"
+			],
+			"properties": {
+				"ipConfigurations": [{
+					"name": "[concat(parameters('bastionHost').name, 'IpConfiguration')]",
+					"properties": {
+						"subnet": {
+							"id": "[variables('bastionSubnetId')]"
+						},
+						"publicIPAddress": {
+							"id": "[variables('bastionIpId')]"
+						}
+					}
+				}]
+			}
+		},
+		{
+			"type": "Microsoft.Network/bastionHosts/providers/diagnosticsettings",
+			"name": "[concat(parameters('bastionHost').name, '/Microsoft.Insights/service')]",
+			"apiVersion": "2016-09-01",
+			"location": "[resourceGroup().location]",
+			"dependsOn": [
+				"[variables('workspaceId')]"
+			],
+			"properties": {
+				"workspaceId": "[variables('workspaceId')]",
+				"logs": [{
+					"category": "BastionAuditLogs",
+					"enabled": true,
+					"retentionPolicy": {
+						"enabled": true,
+						"days": 0
+					}
+				}]
+			}
+		},
+		{
+			"type": "Microsoft.KeyVault/vaults/providers/diagnosticsettings",
+			"name": "[concat(parameters('keyVaultName'), '/Microsoft.Insights/service')]",
+			"apiVersion": "2016-09-01",
+			"location": "[resourceGroup().location]",
+			"dependsOn": [
+				"[variables('workspaceId')]"
+			],
+			"properties": {
+				"workspaceId": "[variables('workspaceId')]",
+				"logs": [{
+					"category": "AuditEvent",
+					"enabled": true,
+					"retentionPolicy": {
+						"enabled": true,
+						"days": 0
+					}
+				}],
+				"metrics": [{
+					"category": "AllMetrics",
+					"timeGrain": "PT1M",
+					"enabled": true,
+					"retentionPolicy": {
+						"enabled": false,
+						"days": 0
+					}
+				}]
+			}
+		},
+		{
+			"type": "Microsoft.Web/hostingEnvironments/providers/diagnosticsettings",
+			"name": "[concat(parameters('ases')[copyIndex()].name, '/Microsoft.Insights/service')]",
+			"apiVersion": "2016-09-01",
+			"location": "[resourceGroup().location]",
+			"copy": {
+				"name": "diagnosticsSettings",
+				"count": "[length(parameters('ases'))]"
+			},
+			"dependsOn": [
+				"[resourceId('Microsoft.Web/hostingEnvironments', parameters('ases')[copyIndex()].name)]",
+				"[variables('workspaceId')]"
+			],
+			"properties": {
+				"workspaceId": "[variables('workspaceId')]",
+				"logs": [{
+					"category": "AppServiceEnvironmentPlatformLogs",
+					"enabled": true,
+					"retentionPolicy": {
+						"enabled": true,
+						"days": 0
+					}
+				}]
+			}
+		},
+		{
+			"type": "Microsoft.Web/sites/providers/diagnosticsettings",
+			"name": "[concat(parameters('ases')[copyIndex()].site.name, '/Microsoft.Insights/service')]",
+			"apiVersion": "2016-09-01",
+			"location": "[resourceGroup().location]",
+			"copy": {
+				"name": "diagnosticsSettings",
+				"count": "[length(parameters('ases'))]"
+			},
+			"dependsOn": [
+				"[resourceId('Microsoft.Web/sites', parameters('ases')[copyIndex()].site.name)]",
+				"[variables('workspaceId')]"
+			],
+			"properties": {
+				"workspaceId": "[variables('workspaceId')]",
+				"logs": [{
+					"category": "AppServiceHTTPLogs",
+					"enabled": true,
+					"retentionPolicy": {
+						"enabled": true,
+						"days": 0
+					}
+				},
+				{
+					"category": "AppServiceConsoleLogs",
+					"enabled": true,
+					"retentionPolicy": {
+						"enabled": true,
+						"days": 0
+					}
+				},
+				{
+					"category": "AppServiceAppLogs",
+					"enabled": true,
+					"retentionPolicy": {
+						"enabled": true,
+						"days": 0
+					}
+				},
+				{
+					"category": "AppServiceFileAuditLogs",
+					"enabled": true,
+					"retentionPolicy": {
+						"enabled": true,
+						"days": 0
+					}
+				},
+				{
+					"category": "AppServiceAuditLogs",
+					"enabled": true,
+					"retentionPolicy": {
+						"enabled": true,
+						"days": 0
+					}
+				}],
+				"metrics": [{
+					"category": "AllMetrics",
+					"timeGrain": "PT1M",
+					"enabled": true,
+					"retentionPolicy": {
+						"enabled": false,
+						"days": 0
+					}
+				}]
+			}
+		}
+	],
+	"outputs": {}
+}

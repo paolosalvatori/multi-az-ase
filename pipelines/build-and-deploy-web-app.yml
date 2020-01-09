@@ -1,0 +1,142 @@
+# ASP.NET Core (.NET Framework)
+# Build and deploy an ASP.NET Core project 
+# For more information, see:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
+
+name: $(BuildDefinitionName)_$(SourceBranchName)_$(Date:yyyyMMdd)$(Rev:.r)
+
+#trigger:
+#- master
+
+pool:
+  name: Default
+  demands: 
+  - msbuild
+  - visualstudio
+  - vstest
+  - agent.name -equals {PREFIX-PLACEHOLDER}AgentVM
+
+variables: 
+  azureSubscription: 'AzureSubscription'
+  resourceGroupName: '{PREFIX-PLACEHOLDER}RG'
+  webApp1Name: '{PREFIX-PLACEHOLDER}1'
+  webApp2Name: '{PREFIX-PLACEHOLDER}2'
+  webApp3Name: '{PREFIX-PLACEHOLDER}3'
+  keyVaultName: '{PREFIX-PLACEHOLDER}KeyVault'
+
+stages:
+- stage: Build
+  jobs:
+  - job: Build
+    variables:
+      solution: '**/*.sln'
+      buildPlatform: 'Any CPU'
+      buildConfiguration: 'Release'
+      appName: '{PREFIX-PLACEHOLDER}'
+    steps:
+    - task: NuGetToolInstaller@1
+    - task: NuGetCommand@2
+      inputs:
+        restoreSolution: '$(solution)'
+    - task: VSBuild@1
+      inputs:
+        solution: '$(solution)'
+        msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:DesktopBuildPackageLocation="$(build.artifactStagingDirectory)\$(appName).zip" /p:AutoParameterizationWebConfigConnectionStrings=False /p:TransformWebConfigEnabled=false /p:DeployIisAppPath="Default Web Site"'
+        platform: '$(buildPlatform)'
+        configuration: '$(buildConfiguration)'
+    - task: PublishSymbols@1
+      displayName: 'Publish symbols path'
+      inputs:
+        SearchPattern: '**\bin\**\*.pdb'
+      continueOnError: true
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Artifact'
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: 'drop'
+        publishLocation: 'Container'
+    - task: DutchWorkzToolsAllVariables@1
+- stage: Deploy
+  jobs:
+  - job: Deploy
+    steps:
+    - task: DutchWorkzToolsAllVariables@1
+    # Download Artifacts
+    - task: DownloadBuildArtifacts@0
+      inputs:
+        buildType: 'current'
+        downloadType: 'single'
+        downloadPath: '$(System.ArtifactsDirectory)'
+        artifactName: 'drop'
+    # Read secrets from Key Vault into pipeline variables
+    - task: AzureKeyVault@1
+      displayName: 'Read Secrets from Key Vault'
+      inputs:
+        azureSubscription: $(azureSubscription)
+        KeyVaultName: '$(keyVaultName)'
+    # Assign Instrumentation Key to variable for variable replacement in appsettings.json
+    - task: PowerShell@2
+      displayName: 'Variable Assignment'
+      inputs:
+        script: Write-Host "##vso[task.setvariable variable=ApplicationInsights.InstrumentationKey]$({PREFIX-PLACEHOLDER}1InstrumentationKey)"
+        targetType: inline
+        errorActionPreference: 'stop'
+    # Deploy Web App to App Service Environment 1
+    - task: AzureRmWebAppDeployment@4
+      displayName: 'Deploy Web App to App Service Environment 1'
+      inputs:
+        azureSubscription: $(azureSubscription)
+        WebAppName: '$(webApp1Name)'
+        deployToSlotOrASE: true
+        ResourceGroupName: '$(resourceGroupName)'
+        VirtualApplication: /
+        packageForLinux: '$(System.ArtifactsDirectory)/drop/{PREFIX-PLACEHOLDER}.zip'
+        enableCustomDeployment: true
+        SetParametersFile: '$(System.ArtifactsDirectory)/drop/{PREFIX-PLACEHOLDER}.SetParameters.xml'
+        enableXmlTransform: true
+        enableXmlVariableSubstitution: true
+        JSONFiles: '**/appsettings.json'
+    # Assign Instrumentation Key to variable for variable replacement in appsettings.json
+    - task: PowerShell@2
+      displayName: 'Variable Assignment'
+      inputs:
+        script: Write-Host "##vso[task.setvariable variable=ApplicationInsights.InstrumentationKey]$({PREFIX-PLACEHOLDER}2InstrumentationKey)"
+        targetType: inline
+        errorActionPreference: 'stop'
+    # Deploy Web App to App Service Environment 2
+    - task: AzureRmWebAppDeployment@4
+      displayName: 'Deploy Web App to App Service Environment 2'
+      inputs:
+        azureSubscription: $(azureSubscription)
+        WebAppName: '$(webApp2Name)'
+        deployToSlotOrASE: true
+        ResourceGroupName: '$(resourceGroupName)'
+        VirtualApplication: /
+        packageForLinux: '$(System.ArtifactsDirectory)/drop/{PREFIX-PLACEHOLDER}.zip'
+        enableCustomDeployment: true
+        SetParametersFile: '$(System.ArtifactsDirectory)/drop/{PREFIX-PLACEHOLDER}.SetParameters.xml'
+        enableXmlTransform: true
+        enableXmlVariableSubstitution: true
+        JSONFiles: '**/appsettings.json'
+    # Assign Instrumentation Key to variable for variable replacement in appsettings.json
+    - task: PowerShell@2
+      displayName: 'Variable Assignment'
+      inputs:
+        script: Write-Host "##vso[task.setvariable variable=ApplicationInsights.InstrumentationKey]$({PREFIX-PLACEHOLDER}3InstrumentationKey)"
+        targetType: inline
+        errorActionPreference: 'stop'
+    # Deploy Web App to App Service Environment 3
+    - task: AzureRmWebAppDeployment@4
+      displayName: 'Deploy Web App to App Service Environment 3'
+      inputs:
+        azureSubscription: $(azureSubscription)
+        WebAppName: '$(webApp3Name)'
+        deployToSlotOrASE: true
+        ResourceGroupName: '$(resourceGroupName)'
+        VirtualApplication: /
+        packageForLinux: '$(System.ArtifactsDirectory)/drop/{PREFIX-PLACEHOLDER}.zip'
+        enableCustomDeployment: true
+        SetParametersFile: '$(System.ArtifactsDirectory)/drop/{PREFIX-PLACEHOLDER}.SetParameters.xml'
+        enableXmlTransform: true
+        enableXmlVariableSubstitution: true
+        JSONFiles: '**/appsettings.json'

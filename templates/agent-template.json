@@ -1,0 +1,549 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "baseResourceGroup": {
+            "type": "string",
+            "defaultValue": "{PREFIX-PLACEHOLDER}RG",
+            "metadata": {
+                "description": "Name for the resource group containing app service environment."
+            }
+        },
+        "vmName": {
+            "type": "string",
+            "defaultValue": "JumpboxVM",
+            "metadata": {
+                "description": "Name for the Jumpbox Virtual Machine."
+            }
+        },
+        "vmSize": {
+            "type": "string",
+            "defaultValue": "Standard_B2s",
+            "metadata": {
+                "description": "Size for the Virtual Machine."
+            }
+        },
+        "vmImagePublisher": {
+            "defaultValue": "MicrosoftWindowsServer",
+            "type": "string",
+            "metadata": {
+                "description": "The publisher of the image reference used by the virtual machine"
+            }
+        },
+        "vmImageOffer": {
+            "defaultValue": "WindowsServer",
+            "type": "string",
+            "metadata": {
+                "description": "The offer of the image reference used by the virtual machine"
+            }
+        },
+        "vmImageSku": {
+            "defaultValue": "2019-Datacenter-with-Containers",
+            "type": "string",
+            "metadata": {
+                "description": "The sku of the image reference used by the virtual machine"
+            }
+        },
+        "vmImageVersion": {
+            "defaultValue": "latest",
+            "type": "string",
+            "metadata": {
+                "description": "The version of the image reference used by the virtual machine"
+            }
+        },
+        "agentName": {
+            "type": "string",
+            "defaultValue": "AgentVM",
+            "metadata": {
+                "description": "Name for the Azure DevOps Agent Virtual Machine."
+            }
+        },
+        "agentSize": {
+            "type": "string",
+            "defaultValue": "Standard_B2s",
+            "metadata": {
+                "description": "Size for the agent."
+            }
+        },
+        "agentImagePublisher": {
+            "defaultValue": "MicrosoftWindowsServer",
+            "type": "string",
+            "metadata": {
+                "description": "The publisher of the image reference used by the agent"
+            }
+        },
+        "agentImageOffer": {
+            "defaultValue": "WindowsServer",
+            "type": "string",
+            "metadata": {
+                "description": "The offer of the image reference used by the agent"
+            }
+        },
+        "agentImageSku": {
+            "defaultValue": "2019-Datacenter-with-Containers",
+            "type": "string",
+            "metadata": {
+                "description": "The sku of the image reference used by the agent"
+            }
+        },
+        "agentImageVersion": {
+            "defaultValue": "latest",
+            "type": "string",
+            "metadata": {
+                "description": "The version of the image reference used by the agent"
+            }
+        },
+        "adminUsername": {
+            "type": "string",
+            "metadata": {
+                "description": "Username for the Virtual Machine."
+            }
+        },
+        "adminPassword": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Password for the Virtual Machine."
+            }
+        },
+        "storageAccountName": {
+            "type": "string",
+            "defaultValue": "baboaspnetsampleaspp",
+            "metadata": {
+                "description": "Name of the storage account"
+            }
+        },
+        "virtualNetworkName": {
+            "type": "string",
+            "defaultValue": "{PREFIX-PLACEHOLDER}AppVirtualNetwork",
+            "metadata": {
+                "description": "Name of the Virtual Network."
+            }
+        },
+        "vmSubnetName": {
+            "type": "string",
+            "defaultValue": "Default",
+            "metadata": {
+                "description": "Name of the subnet containing the jumpbox virtual machine."
+            }
+        },
+        "agentSubnetName": {
+            "type": "string",
+            "defaultValue": "Default",
+            "metadata": {
+                "description": "Name of the subnet containing the Azure DevOps agent virtual machine."
+            }
+        },
+        "location": {
+            "type": "string",
+            "defaultValue": "[resourceGroup().location]",
+            "metadata": {
+                "description": "Location for the Virtual Machine."
+            }
+        },
+        "workspaceName": {
+            "type": "string",
+            "defaultValue": "{PREFIX-PLACEHOLDER}App",
+            "metadata": {
+                "description": "Name of the Log Analytics workspace"
+            }
+        },
+        "adoAccountUrl": {
+            "defaultValue": "https://dev.azure.com/your-azure-devops-organization/",
+            "type": "string",
+            "metadata": {
+                "description": "The Azure DevOps account to use. Example: If your URL is https://dev.azure.com/contoso, just specify contoso"
+            }
+        },
+        "adoPersonalAccessToken": {
+            "defaultValue": "",
+            "type": "string",
+            "metadata": {
+                "description": "The Personal Access Token that will be used to authenticate against Azure Pipelines to download and configure the agent"
+            }
+        },
+        "adoAgentPool": {
+            "defaultValue": "Default",
+            "type": "string",
+            "metadata": {
+                "description": "Name of the Agent Pool used by the agent"
+            }
+        },
+        "dscScriptBaseUri": {
+            "defaultValue": "https://paolosalvatori.blob.core.windows.net/dsc/",
+            "type": "string",
+            "metadata": {
+                "description": "Base URL for scripts."
+            }
+        },
+        "agentConfigureModuleRelativePath": {
+            "defaultValue": "ConfigureAzureDevOpsWindowsAgent.ps1.zip",
+            "type": "string",
+            "metadata": {
+                "description": "Name of the Agent Pool used by the agent"
+            }
+        },
+        "agentConfigureFunction": {
+            "defaultValue": "ConfigureASEBuildAgent.ps1\\ConfigureASEBuildAgentDsc",
+            "type": "string",
+            "metadata": {
+                "description": "Name of the configure function."
+            }
+        },
+        "agentDownloadUrl": {
+            "defaultValue": "https://vstsagentpackage.azureedge.net/agent/2.160.0/vsts-agent-win-x64-2.160.0.zip",
+            "type": "string",
+            "metadata": {
+                "description": "URL of the agent release"
+            }
+        }
+    },
+    "variables": {
+        "vmId": "[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]",
+        "agentId": "[resourceId('Microsoft.Compute/virtualMachines', parameters('agentName'))]",
+        "networkSecurityGroupName": "VirtualMachinesNSG",
+        "vmPublicIpAddressName": "[concat(parameters('vmName'), 'Ip')]",
+        "agentPublicIpAddressName": "[concat(parameters('agentName'), 'Ip')]",
+        "vmNicName": "[concat(parameters('vmName'), 'Nic')]",
+        "agentNicName": "[concat(parameters('agentName'), 'Nic')]",
+        "storageAccountId": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
+        "vnetId": "[resourceId(subscription().subscriptionId, parameters('baseResourceGroup'), 'Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
+        "vmSubnetId": "[resourceId(subscription().subscriptionId, parameters('baseResourceGroup'), 'Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworkName'), parameters('vmSubnetName'))]",
+        "agentSubnetId": "[resourceId(subscription().subscriptionId, parameters('baseResourceGroup'), 'Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworkName'), parameters('agentSubnetName'))]",
+        "workspaceId": "[resourceId(subscription().subscriptionId, parameters('baseResourceGroup'), 'Microsoft.OperationalInsights/workspaces/', parameters('workspaceName'))]",
+        "nsgId": "[resourceId(subscription().subscriptionId, parameters('baseResourceGroup'), 'Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]",
+        "vmPublicIpId": "[resourceId('Microsoft.Network/publicIPAddresses',variables('vmPublicIpAddressName'))]",
+        "agentPublicIpId": "[resourceId('Microsoft.Network/publicIPAddresses',variables('agentPublicIpAddressName'))]",
+        "vmNicId": "[resourceId('Microsoft.Network/networkInterfaces/', variables('vmNicName'))]",
+        "agentNicId": "[resourceId('Microsoft.Network/networkInterfaces/', variables('agentNicName'))]",
+        "agentConfigureModuleURL": "[uri(parameters('dscScriptBaseUri'), parameters('agentConfigureModuleRelativePath'))]"
+    },
+    "resources": [{
+            "type": "Microsoft.Storage/storageAccounts",
+            "name": "[parameters('storageAccountName')]",
+            "apiVersion": "2016-01-01",
+            "location": "[parameters('location')]",
+            "sku": {
+                "name": "Standard_LRS"
+            },
+            "kind": "Storage",
+            "properties": {}
+        },
+        {
+            "apiVersion": "2019-03-01",
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "[parameters('vmName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[variables('storageAccountId')]",
+                "[variables('vmNicId')]"
+            ],
+            "tags": {
+                "name": "[parameters('vmName')]"
+            },
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[parameters('vmSize')]"
+                },
+                "osProfile": {
+                    "computerName": "[parameters('vmName')]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]",
+                    "windowsConfiguration": {
+                        "provisionVmAgent": "true"
+                    }
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "[parameters('vmImagePublisher')]",
+                        "offer": "[parameters('vmImageOffer')]",
+                        "sku": "[parameters('vmImageSku')]",
+                        "version": "[parameters('vmImageVersion')]"
+                    },
+                    "osDisk": {
+                        "createOption": "FromImage"
+                    },
+                    "dataDisks": []
+                },
+                "networkProfile": {
+                    "networkInterfaces": [{
+                        "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('vmNicName'))]"
+                    }]
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": "[bool('true')]",
+                        "storageUri": "[reference(variables('storageAccountId')).primaryEndpoints['blob']]"
+                    }
+                }
+            },
+            "resources": []
+        },
+        {
+            "apiVersion": "2019-03-01",
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "[parameters('agentName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[variables('storageAccountId')]",
+                "[variables('agentNicId')]"
+            ],
+            "tags": {
+                "name": "[parameters('agentName')]"
+            },
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[parameters('agentSize')]"
+                },
+                "osProfile": {
+                    "computerName": "[parameters('agentName')]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]",
+                    "windowsConfiguration": {
+                        "provisionVmAgent": "true"
+                    }
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "[parameters('agentImagePublisher')]",
+                        "offer": "[parameters('agentImageOffer')]",
+                        "sku": "[parameters('agentImageSku')]",
+                        "version": "[parameters('agentImageVersion')]"
+                    },
+                    "osDisk": {
+                        "createOption": "FromImage"
+                    },
+                    "dataDisks": []
+                },
+                "networkProfile": {
+                    "networkInterfaces": [{
+                        "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('agentNicName'))]"
+                    }]
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": "[bool('true')]",
+                        "storageUri": "[reference(variables('storageAccountId')).primaryEndpoints['blob']]"
+                    }
+                }
+            },
+            "resources": []
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(parameters('agentName'), '/ConfigureAgent')]",
+            "dependsOn": [
+                "[variables('agentId')]"
+            ],
+            "apiVersion": "2016-03-30",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "publisher": "Microsoft.Powershell",
+                "type": "DSC",
+                "typeHandlerVersion": "2.21",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "modulesURL": "[variables('agentConfigureModuleURL')]",
+                    "configurationFunction": "[parameters('agentConfigureFunction')]",
+                    "properties": {
+                        "TSUrl": "[parameters('adoAccountUrl')]",
+                        "VSTSAgentUrl": "[parameters('agentDownloadUrl')]",
+                        "AgentPool": "[parameters('adoAgentPool')]",
+                        "PAToken": "[parameters('adoPersonalAccessToken')]"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2017-08-01",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "name": "[variables('vmPublicIpAddressName')]",
+            "location": "[parameters('location')]",
+            "tags": {
+                "name": "[parameters('vmName')]"
+            },
+            "properties": {
+                "publicIPAllocationMethod": "Dynamic",
+                "dnsSettings": {
+                    "domainNameLabel": "[concat(toLower(parameters('vmName')), uniquestring(resourceGroup().id))]"
+                }
+            }
+        },
+        {
+            "apiVersion": "2017-08-01",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "name": "[variables('agentPublicIpAddressName')]",
+            "location": "[parameters('location')]",
+            "tags": {
+                "name": "[parameters('agentName')]"
+            },
+            "properties": {
+                "publicIPAllocationMethod": "Dynamic",
+                "dnsSettings": {
+                    "domainNameLabel": "[concat(toLower(parameters('agentName')), uniquestring(resourceGroup().id))]"
+                }
+            }
+        },
+        {
+            "apiVersion": "2018-08-01",
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[variables('vmNicName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[variables('vmPublicIpId')]",
+                "[variables('nsgId')]"
+            ],
+            "tags": {
+                "name": "[parameters('vmName')]"
+            },
+            "properties": {
+                "ipConfigurations": [{
+                    "name": "VmIpConfiguration",
+                    "properties": {
+                        "privateIPAllocationMethod": "Dynamic",
+                        "publicIPAddress": {
+                            "id": "[variables('vmPublicIpId')]"
+                        },
+                        "subnet": {
+                            "id": "[variables('vmSubnetId')]"
+                        }
+                    }
+                }],
+                "networkSecurityGroup": {
+                    "id": "[variables('nsgId')]"
+                }
+            }
+        },
+        {
+            "apiVersion": "2018-08-01",
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[variables('agentNicName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[variables('agentPublicIpId')]",
+                "[variables('nsgId')]"
+            ],
+            "tags": {
+                "name": "[parameters('agentName')]"
+            },
+            "properties": {
+                "ipConfigurations": [{
+                    "name": "VmIpConfiguration",
+                    "properties": {
+                        "privateIPAllocationMethod": "Dynamic",
+                        "publicIPAddress": {
+                            "id": "[variables('agentPublicIpId')]"
+                        },
+                        "subnet": {
+                            "id": "[variables('agentSubnetId')]"
+                        }
+                    }
+                }],
+                "networkSecurityGroup": {
+                    "id": "[variables('nsgId')]"
+                }
+            }
+        },
+        {
+            "name": "[variables('networkSecurityGroupName')]",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2017-06-01",
+            "location": "[parameters('location')]",
+            "tags": {
+                "name": "[parameters('vmName')]"
+            },
+            "properties": {
+                "securityRules": [{
+                    "name": "AllopRDPInbound",
+                    "properties": {
+                        "description": "Allow RDP Connections",
+                        "priority": 100,
+                        "protocol": "Tcp",
+                        "access": "Allow",
+                        "direction": "Inbound",
+                        "sourceAddressPrefix": "*",
+                        "sourcePortRange": "*",
+                        "destinationAddressPrefix": "*",
+                        "destinationPortRange": "3389"
+                    }
+                }]
+            }
+        },
+        {
+            "apiVersion": "2019-03-01",
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(parameters('vmName'), '/MicrosoftMonitoringAgent')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[variables('vmId')]"
+            ],
+            "properties": {
+                "publisher": "Microsoft.EnterpriseCloud.Monitoring",
+                "type": "MicrosoftMonitoringAgent",
+                "typeHandlerVersion": "1.0",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "workspaceId": "[reference(variables('workspaceId'), '2017-03-15-preview').customerId]"
+                },
+                "protectedSettings": {
+                    "workspaceKey": "[listKeys(variables('workspaceId'), '2017-03-15-preview').primarySharedKey]"
+                }
+            }
+        },
+        {
+            "apiVersion": "2019-03-01",
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(parameters('vmName'), '/DependencyAgent')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[variables('vmId')]"
+            ],
+            "properties": {
+                "publisher": "Microsoft.Azure.Monitoring.DependencyAgent",
+                "type": "DependencyAgentWindows",
+                "typeHandlerVersion": "9.4",
+                "autoUpgradeMinorVersion": true,
+                "settings": {},
+                "protectedSettings": {}
+            }
+        },
+        {
+            "apiVersion": "2019-03-01",
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(parameters('agentName'), '/MicrosoftMonitoringAgent')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[variables('agentId')]"
+            ],
+            "properties": {
+                "publisher": "Microsoft.EnterpriseCloud.Monitoring",
+                "type": "MicrosoftMonitoringAgent",
+                "typeHandlerVersion": "1.0",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "workspaceId": "[reference(variables('workspaceId'), '2017-03-15-preview').customerId]"
+                },
+                "protectedSettings": {
+                    "workspaceKey": "[listKeys(variables('workspaceId'), '2017-03-15-preview').primarySharedKey]"
+                }
+            }
+        },
+        {
+            "apiVersion": "2019-03-01",
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(parameters('agentName'), '/DependencyAgent')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[variables('agentId')]"
+            ],
+            "properties": {
+                "publisher": "Microsoft.Azure.Monitoring.DependencyAgent",
+                "type": "DependencyAgentWindows",
+                "typeHandlerVersion": "9.4",
+                "autoUpgradeMinorVersion": true,
+                "settings": {},
+                "protectedSettings": {}
+            }
+        }
+    ],
+    "outputs": {}
+}

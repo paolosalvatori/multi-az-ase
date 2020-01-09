@@ -1,0 +1,84 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.1",
+  "parameters": {
+    "baseResourceGroup": {
+      "value": "{PREFIX-PLACEHOLDER}RG"
+    },
+    "location": {
+      "value": "West Europe"
+    },
+    "vmName": {
+      "value": "JumpboxVM"
+    },
+    "vmSize": {
+      "value": "Standard_B2s"
+    },
+    "vmImagePublisher": {
+      "value": "MicrosoftWindowsServer"
+    },
+    "vmImageOffer": {
+      "value": "WindowsServer"
+    },
+    "vmImageSku": {
+      "value": "2019-Datacenter-with-Containers"
+    },
+    "agentName": {
+      "value": "{PREFIX-PLACEHOLDER}AgentVM"
+    },
+    "agentSize": {
+      "value": "Standard_B2s"
+    },
+    "agentImagePublisher": {
+      "value": "MicrosoftVisualStudio"
+    },
+    "agentImageOffer": {
+      "value": "visualstudio2019latest"
+    },
+    "agentImageSku": {
+      "value": "vs-2019-ent-latest-ws2019"
+    },
+    "adminUsername": {
+      "value": "{USERNAME}"
+    },
+    "adminPassword": {
+      "value": "{STRONG-PASSWORD}"
+    },
+    "storageAccountName": {
+      "value": "{UNIQUE-NAME}"
+    },
+    "virtualNetworkName": {
+      "value": "{PREFIX-PLACEHOLDER}Vnet"
+    },
+    "vmSubnetName": {
+      "value": "VmSubnet"
+    },
+    "agentSubnetName": {
+      "value": "AgentSubnet"
+    },
+    "workspaceName": {
+      "value": "{PREFIX-PLACEHOLDER}LogAnalytics"
+    },
+    "adoAccountUrl": {
+      "value": "https://dev.azure.com/{AZURE-DEVOPS-ORGANIZATION}/"
+    },
+    "adoPersonalAccessToken": {
+      "value": "{AZURE-DEVOPS-PERSONAL-ACCESS-TOKEN}"
+    },
+    "adoAgentPool": {
+      "value": "Default"
+    },
+    "dscScriptBaseUri": {
+      "value": "https://paolosalvatori.blob.core.windows.net/dsc/"
+    },
+    "agentConfigureModuleRelativePath": {
+      "value": "ConfigureAzureDevOpsWindowsAgent.ps1.zip"
+    },
+    "agentConfigureFunction": {
+      "value": "ConfigureAzureDevOpsBuildAgent.ps1\\ConfigureAzureDevOpsBuildAgentDsc"
+    },
+    "agentDownloadUrl": {
+      "value": "https://vstsagentpackage.azureedge.net/agent/2.160.0/vsts-agent-win-x64-2.160.0.zip"
+    }
+  }
+}

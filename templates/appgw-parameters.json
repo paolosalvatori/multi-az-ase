@@ -1,0 +1,123 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.1",
+	"parameters": {
+		"location": {
+			"value": "West Europe"
+		},
+		"workspaceName": {
+			"value": "{PREFIX-PLACEHOLDER}LogAnalytics"
+		},
+		"baseResourceGroup": {
+			"value": "{PREFIX-PLACEHOLDER}RG"
+		},
+		"appGwName": {
+			"value": "{PREFIX-PLACEHOLDER}ApplicationGateway"
+		},
+		"appGwSku": {
+			"value": "Standard_v2"
+		},
+		"appGwCapacity": {
+			"value": 1
+		},
+		"enableHttp2": {
+			"value": false
+		},
+		"appGwZones": {
+			"value": ["1", "2", "3"]
+		},
+		"appGwIpConfig": {
+			"value": "appGatewayIpConfig"
+		},
+		"appGwDiagnosticSettingsName": {
+			"value": "DiagnosticSettings"
+		},
+		"appGwPublicFrontendIpName": {
+			"value": "appGwPublicFrontendIp"
+		},
+		"appGwPrivateFrontendIpName": {
+			"value": "appGwPPrivateFrontendIp"
+		},
+		"appGwPublicIpAddressName": {
+			"value": "{PREFIX-PLACEHOLDER}ApplicationGatewayPublicIp"
+		},
+		"appGwPrivateIPAddress": {
+			"value": "10.0.2.4"
+		},
+		"appGwBackendAddressPoolName": {
+			"value": "{PREFIX-PLACEHOLDER}BackendPool"
+		},
+		"appGwRequestRoutingRuleName": {
+			"value": "{PREFIX-PLACEHOLDER}RequestRoutingRule"
+		},
+		"appGwRequestRewriteRuleSetName": {
+			"value": "{PREFIX-PLACEHOLDER}RewriteRuleSet"
+		},
+		"appGwHttpListener": {
+			"value": {
+				"name": "{PREFIX-PLACEHOLDER}Listener",
+				"protocol": "Https"
+			}
+		},
+		"appGwHealthProbe": {
+			"value": {
+				"name": "{PREFIX-PLACEHOLDER}HealthProbe",
+				"protocol": "Https",
+				"path": "/",
+				"interval": 30,
+				"timeout": 30,
+				"unhealthyThreshold": 3
+			}
+		},
+		"appGwHttpSetting": {
+			"value": {
+				"name": "{PREFIX-PLACEHOLDER}HttpSetting",
+				"protocol": "Https",
+				"hostName": "",
+				"port": 443,
+				"cookieBasedAffinity": "Disabled",
+				"requestTimeout": 20
+			}
+		},
+		"appGwBackendAddressPoolAddresses": {
+			"value": [{
+					"fqdn": "{PREFIX-PLACEHOLDER}1.{PREFIX-PLACEHOLDER}ase1.appserviceenvironment.net"
+				},
+				{
+					"fqdn": "{PREFIX-PLACEHOLDER}2.{PREFIX-PLACEHOLDER}ase2.appserviceenvironment.net"
+				},
+				{
+					"fqdn": "{PREFIX-PLACEHOLDER}3.{PREFIX-PLACEHOLDER}ase3.appserviceenvironment.net"
+				}
+			]
+		},
+		"appGwFrontendPort": {
+			"value": {
+				"name": "Port443",
+				"port": 443
+			}
+		},
+		"appGwSslCertificateData": {
+            "reference": {
+                "keyVault": {
+                    "id": "/subscriptions/{YOUR-AZURE-SUSBCRIPTION}/resourcegroups/{PREFIX-PLACEHOLDER}RG/providers/Microsoft.KeyVault/vaults/{PREFIX-PLACEHOLDER}KeyVault"
+                },
+                "secretName": "{PREFIX-PLACEHOLDER}ApplicationGatewayCertificate"
+            }
+        },
+        "appGwSslCertificatePassword": {
+            "reference": {
+                "keyVault": {
+                    "id": "/subscriptions/{YOUR-AZURE-SUSBCRIPTION}/resourcegroups/{PREFIX-PLACEHOLDER}RG/providers/Microsoft.KeyVault/vaults/{PREFIX-PLACEHOLDER}KeyVault"
+                },
+                "secretName": "{PREFIX-PLACEHOLDER}ApplicationGatewayPassword"
+            }
+        },
+		"virtualNetworkName": {
+			"value": "{PREFIX-PLACEHOLDER}Vnet"
+		},
+		"appGwSubnetName": {
+			"value": "AppGatewaySubnet"
+		}
+	}
+}

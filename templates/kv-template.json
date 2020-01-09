@@ -1,0 +1,96 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"tenantId": {
+			"type": "string",
+			"defaultValue": "[subscription().tenantId]",
+			"metadata": {
+				"description": "Specifies the tenant used by Key Vault."
+			}
+		},
+		"location": {
+			"type": "string",
+			"defaultValue": "[resourceGroup().location]",
+			"metadata": {
+				"description": "Location for the resources."
+			}
+		},
+		"keyVaultName": {
+			"type": "string",
+			"defaultValue": "{PREFIX-PLACEHOLDER}AppKeyVault",
+			"metadata": {
+				"description": "Specifies the name of the Key Vault used by Azure DevOps."
+			}
+		},
+		"keyVaultUsers": {
+			"type": "array",
+			"metadata": {
+				"description": "This array contains the list of object ids of Key Vault users"
+			}
+		}
+	},
+	"variables": {},
+	"resources": [{
+			"type": "Microsoft.KeyVault/vaults",
+			"apiVersion": "2016-10-01",
+			"name": "[parameters('keyVaultName')]",
+			"location": "[parameters('location')]",
+			"properties": {
+				"sku": {
+					"family": "A",
+					"name": "standard"
+				},
+				"tenantId": "[parameters('tenantId')]",
+				"copy": [{
+					"name": "accessPolicies",
+					"count": "[length(parameters('keyVaultUsers'))]",
+					"input": {
+						"tenantId": "[parameters('tenantId')]",
+						"objectId": "[parameters('keyVaultUsers')[copyIndex('accessPolicies')]]",
+						"permissions": {
+							"keys": [
+								"get",
+								"create",
+								"delete",
+								"list",
+								"update",
+								"import",
+								"backup",
+								"restore",
+								"recover"
+							],
+							"secrets": [
+								"get",
+								"list",
+								"set",
+								"delete",
+								"backup",
+								"restore",
+								"recover"
+							],
+							"certificates": [
+								"get",
+								"list",
+								"delete",
+								"create",
+								"import",
+								"update",
+								"managecontacts",
+								"getissuers",
+								"listissuers",
+								"setissuers",
+								"deleteissuers",
+								"manageissuers",
+								"recover"
+							]
+						}
+					}
+				}],
+				"enabledForDeployment": true,
+				"enabledForTemplateDeployment": true
+			}
+		}
+	],
+	"outputs": {}
+}
